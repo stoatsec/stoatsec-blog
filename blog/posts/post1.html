@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="../../styles/post.css">
+    <title>StoatSec Blog | Format Exploit</title>
+</head>
+<body>
+    <div class="background-animation"></div>
+    <div class="progress-bar">
+        <div class="progress-indicator"></div>
+    </div>
+    <main class="container">
+        <article class="blog-post">
+            <h1 class="blog-post-title">Memory Corruption using Format Specifiers</h1>
+            <div class="blog-post-meta">
+                <span class="blog-post-date">Sept 10, 2024</span>
+                <span class="blog-post-author">By Stoat Security</span>
+            </div>
+            <div class="blog-post-content">
+                <p>(requires a basic understanding of how the stack and function calls work)</p>
+                
+                <p>Format string vulnerabilities are a class of vulnerability that effects various programming languages in distinct ways, because they tend to implement string formatting differently. This post will mainly
+be covering format string vulnerabilities targeting the C programming language.</p>
+
+                <h2>So what <i>exactly</i> is string formatting?</h2>
+                <p>Most programming languages implement some way to embed variables into strings. In a nutshell, string formatting is just a way for the language to dynamically create strings using variable values.
+Here's a simple example of a C program that uses a string format specifier:</p>
+
+                <div class="code-block">
+                    <pre><code>
+  #include &lt;stdio.h&gt;
+
+  int main() {
+      char greeting[] = "Hello";
+      printf("%s, World!\n", greeting);
+  }
+                    </code></pre>
+                    <button class="copy-button" aria-label="Copy code">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
+                            <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
+                        </svg>
+                    </button>
+                </div>
+
+                <p>This program creates a variable "greeting" that contains "Hello, World!".</p> 
+                
+                <p>Printf is actually just a wrapper around multiple function calls, the 'f' standing for "format". The string passed as the first argument to printf will then be passed to a format function, which will evaluate the other arguments passed to printf and manipulate the string accordingly.</p> 
+                
+                <p>When run, the output will be "Hello, World", because the '%s' in the first string argument of the printf function will be replaced with the value provided in the second argument -- the 'greeting' variable.</p>
+
+
+                <p>This is all well and good, but printf can also be called without any second argument provided, so what if a programmer were to initiate a printf call where the string contains a format specifier, but no second argument?</p> 
+                
+                <p>C is not a "memory safe" language, and if a negligent developer calls a function like printf with fewer arguments supplied then there are format specifiers in the initial string, <i>it is possible to read values from the stack, or write to arbitrary locations in memory</i>.</p>
+                
+                
+                
+                <p>To understand how this is possible, we need to look into how the printf function actually works.</p>
+                
+                <p>When a function is called, in this case printf, the arguments supplied to the function are then stored in either registers or the stack (depending on the calling convention). Format specifiers actually read values from the stack (expecting them to be the values placed on the stack when the function was called), so calling printf with a format specifier like '%s' when no second argument is provided will cause the program to try and read arbitrary stack data as a string. Using certain format specifiers, it is possible to leak stack data this way, which can pose obvious security concerns if sensitive data is stored on the stack.</p> 
+                
+                <p>Even more troublesome, what if the first argument passed to printf were a user-supplied string??</p>                
+                
+                <p>A malicious user could type a bunch of format specifiers into a user-supplied string that is passed to the printf function to abuse this vulnerability and leak stack data intentionally (and again, there doesn't need to be no second argument. The amount of format specifiers provided just needs to be greater than the amount of arguments provided after the string to start leaking from memory).</p>
+                
+                <p>Here's an example:</p>
+                
+                <div class="code-block">
+                    <pre><code>
+  #include &lt;stdio.h&gt;
+
+  int main() {
+      printf("%x - %x - %x - %x - %x - %x");
+  }
+                    </code></pre>
+                    <button class="copy-button" aria-label="Copy code">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
+                            <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
+                        </svg>
+                    </button>
+                </div>
+                
+                <p>Compile with gcc using 'gcc formatstr.c -o formatstr', and when run, this will print the first 6 values read from the stack.</p>
+                
+                <p>Earlier I mentioned it was possible to write data to memory using format specifiers. This is because of the '%n' specifier, which writes the size of the input provided <i>before</i> the %n specifier to a specific address in memory.</p> 
+                
+                <p>If we were to supply the input "TESTING%n" to a printf statement, it would write 7 (the length of 'TESTING') to 0x70 (0x70 because no other address is specified in our payload yet). to specify an address to write to, we can use the syntax "%&lt;num&gt;$n", which will instead write to the address specified by '&lt;num&gt;'. We can combine this with another technique of 'padding' to craft malicious payloads and write them to specific addresses. Padding can be done with "%&lt;num&gt;x" (the specific format specifier doesn't really matter, we're just using 'x' here), and in doing so inflate the size of our input so the '%n' write is able to write larger values to the specified address.</p>
+                
+                <p>Without the use of padding, we can only write numbers equal to the maximum length of the string buffer a user can provide. Most user-supplied input buffers in C are capped to avoid buffer overflows, so padding allows us to work around this caveat.</p>
+                
+                <p>Finally, I would like to mention again that format specifiers are implemented differently for different programming languages, and this can allow us to perform different types of attacks using format strings than may be possible with C. An example of one such attack might be a denial of service against Java programs. In Java, String types are stored on the heap and can be dynamically manipulated at runtime (unlike with C, where 'strings' are a fixed size buffer of characters), so we could potentially trigger a heap overflow using a large amount of padding as our payload.</p>
+                
+                <p>For a write up discussing the crafting of string format payloads in more detail, I suggest checking out axcheron.github.io/exploit-101-format-strings. The paper provides a bit more of a practical explanation on how to abuse these bugs in the wild.</p>
+
+            </div>
+            <a href="../index.html" class="home-button">Back to Home</a>
+        </article>
+    </main>
+    
+    <footer>
+        <p>&copy; 2024 Stoat Security. All rights reserved.</p>
+    </footer>
+    
+    <script src="../../scripts/particles.js"></script>
+    <script src="../../scripts/post.js"></script>
+</body>
+</html>
+
