@@ -20,7 +20,7 @@
             </div>
             <div class="blog-post-content">
                 
-                <p><i><b>Format string vulnerabilities</b></i> are a class that affects various programming languages in distinct ways, because each language tends to implement string formatting differently. This post will mainly
+                <p><i><b>Format string vulnerabilities</b></i> are a vulnerability that affects various programming languages in distinct ways, because each language tends to implement string formatting differently. This post will mainly
 cover format string vulnerabilities targeting the C programming language.</p>
 
                 <h2>So what <i>exactly</i> is string formatting?</h2>
@@ -93,7 +93,7 @@ Here's a simple example of a C program that uses a string format specifier:</p>
                 
                 <p>Because format specifiers are implemented differently for different programming languages, this allows us to perform different types of attacks using format strings than may be possible with C. One example of such an attack might be a denial of service against Java programs. In Java, string variable types are stored in memory on the heap and can be dynamically manipulated at runtime (unlike with C, where 'strings' are a fixed size buffer of characters), so we could potentially trigger a heap overflow using a large amount of padding as our payload.</p>
                 
-                <p>For a write up discussing the crafting of string format payloads in more detail, I suggest checking out axcheron.github.io/exploit-101-format-strings. The paper provides a bit more of a practical explanation on how to abuse these bugs in the wild.</p>
+                <p>For a write up discussing the crafting of string format payloads in more detail, I suggest checking out <a href="https://axcheron.github.io/exploit-101-format-strings" target="_blank" class="hyperlink">this article</a>. The paper provides a bit more of a practical explanation on how to abuse these bugs in the wild.</p>
 
             </div>
             <a href="../../index.html" class="home-button">Back to Home</a>

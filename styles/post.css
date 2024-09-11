@@ -104,6 +104,22 @@ body {
     z-index: -1;
 }
 
+a.hyperlink {
+    color: var(--accent-color);
+    text-decoration: dotted;
+    transition: color 0.3s ease;
+}
+
+a {
+    color: var(--text-color);
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+
 .progress-bar {
     position: fixed;
     top: 0;
