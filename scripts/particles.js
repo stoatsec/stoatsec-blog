@@ -39,7 +39,7 @@ function drawParticles() {
         ctx.beginPath();
         ctx.arc(particle.x, particle.y, particle.radius, 0, Math.PI * 2);
         ctx.fillStyle = particle.color;
-        ctx.globalAlpha = 0.5;
+        ctx.globalAlpha = 0.65;
         ctx.fill();
         ctx.globalAlpha = 1;
 
