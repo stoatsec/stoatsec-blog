@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="../../styles/post.css">
+    <title>StoatSec Blog | Memory Layout</title>
+</head>
+<body>
+    <div class="background-animation"></div>
+    <div class="progress-bar">
+        <div class="progress-indicator"></div>
+    </div>
+    <main class="container">
+        <article class="blog-post">
+            <h1 class="blog-post-title">Memory Layout of an Executable</h1>
+            <div class="blog-post-meta">
+                <span class="blog-post-date">Sept 14, 2024</span>
+                <span class="blog-post-author">By Stoat Security</span>
+            </div>
+            <div class="blog-post-content">
+                
+                <p>This article will be discussing the layout of a process loaded into memory, its sections, and how the process is run.</p>
+                
+                <p>Before we dive into what sections are and how they're utilized by processes, however, we need a basic understanding of memory. Memory is a buffer of bits that a computer uses to store values. In a nutshell, memory is just a way for your computer to store, read, and change values when necessary.</p>
+                
+                <p>For a more detailed look at how memory works at a hardware-level, I highly recommend checking out <a href="https://youtube.com/@CoreDumpped" target="_blank" class="hyperlink">Core Dumped's Youtube channel</a>.</p>
+
+            
+                
+                <h2>What exactly are sections?</h2>
+                
+                <p>When a program is compiled into an executable file, the file doesn't <i>just</i> contain the code to execute.</p>
+                
+                <p>If we look at the structure of an executable file, we can see that there are actually quite a few parts to it divided by "section headers".</p>
+                
+                <p>Using objdump, we can view these section headers: </p>
+                
+                <div class="code-block">
+                    <pre><code>
+stoatsec@blog~$ objdump -h bof
+
+bof:     file format elf64-x86-64
+
+Sections:
+Idx Name          Size      VMA               LMA               File off  Algn
+    0 .interp       0000001c  0000000000000318  0000000000000318  00000318  2**0
+                    CONTENTS, ALLOC, LOAD, READONLY, DATA
+    1 .note.gnu.property 00000040  0000000000000338  0000000000000338  00000338  2**3
+                    CONTENTS, ALLOC, LOAD, READONLY, DATA
+    2 .note.gnu.build-id 00000024  0000000000000378  0000000000000378  00000378  2**2
+                    CONTENTS, ALLOC, LOAD, READONLY, DATA
+    3 .note.ABI-tag 00000020  000000000000039c  000000000000039c  0000039c  2**2
+                    CONTENTS, ALLOC, LOAD, READONLY, DATA
+    4 .gnu.hash     00000024  00000000000003c0  00000000000003c0  000003c0  2**3
+                    CONTENTS, ALLOC, LOAD, READONLY, DATA
+    5 .dynsym       00000138  00000000000003e8  00000000000003e8  000003e8  2**3
+                    CONTENTS, ALLOC, LOAD, READONLY, DATA
+    6 .dynstr       000000c8  0000000000000520  0000000000000520  00000520  2**0
+                    CONTENTS, ALLOC, LOAD, READONLY, DATA
+    7 .gnu.version  0000001a  00000000000005e8  00000000000005e8  000005e8  2**1
+                    CONTENTS, ALLOC, LOAD, READONLY, DATA
+    8 .gnu.version_r 00000040  0000000000000608  0000000000000608  00000608  2**3
+                    CONTENTS, ALLOC, LOAD, READONLY, DATA
+    9 .rela.dyn     000000d8  0000000000000648  0000000000000648  00000648  2**3
+                    CONTENTS, ALLOC, LOAD, READONLY, DATA
+    10 .rela.plt     00000090  0000000000000720  0000000000000720  00000720  2**3
+                    CONTENTS, ALLOC, LOAD, READONLY, DATA
+    11 .init         0000001b  0000000000001000  0000000000001000  00001000  2**2
+                    CONTENTS, ALLOC, LOAD, READONLY, CODE
+    12 .plt          00000070  0000000000001020  0000000000001020  00001020  2**4
+                    CONTENTS, ALLOC, LOAD, READONLY, CODE
+    13 .text         00000857  0000000000001090  0000000000001090  00001090  2**4
+                    CONTENTS, ALLOC, LOAD, READONLY, CODE
+    14 .fini         0000000d  00000000000018e8  00000000000018e8  000018e8  2**2
+                    CONTENTS, ALLOC, LOAD, READONLY, CODE
+    15 .rodata       000002dc  0000000000002000  0000000000002000  00002000  2**3
+                    CONTENTS, ALLOC, LOAD, READONLY, DATA
+    16 .eh_frame_hdr 00000064  00000000000022dc  00000000000022dc  000022dc  2**2
+                    CONTENTS, ALLOC, LOAD, READONLY, DATA
+    17 .eh_frame     0000017c  0000000000002340  0000000000002340  00002340  2**3
+                    CONTENTS, ALLOC, LOAD, READONLY, DATA
+    18 .init_array   00000008  0000000000003dd0  0000000000003dd0  00002dd0  2**3
+                    CONTENTS, ALLOC, LOAD, DATA
+    19 .fini_array   00000008  0000000000003dd8  0000000000003dd8  00002dd8  2**3
+                    CONTENTS, ALLOC, LOAD, DATA
+    20 .dynamic      000001e0  0000000000003de0  0000000000003de0  00002de0  2**3
+                    CONTENTS, ALLOC, LOAD, DATA
+    21 .got          00000028  0000000000003fc0  0000000000003fc0  00002fc0  2**3
+                    CONTENTS, ALLOC, LOAD, DATA
+    22 .got.plt      00000048  0000000000003fe8  0000000000003fe8  00002fe8  2**3
+                    CONTENTS, ALLOC, LOAD, DATA
+    23 .data         00000010  0000000000004030  0000000000004030  00003030  2**3
+                    CONTENTS, ALLOC, LOAD, DATA
+    24 .bss          00000010  0000000000004040  0000000000004040  00003040  2**4
+                    ALLOC
+    25 .comment      0000001b  0000000000000000  0000000000000000  00003040  2**0
+                    CONTENTS, READONLY
+                    </code></pre>
+                </div>
+                
+                <p>These section headers are prefixed by a period, and then followed by some string of characters. Areas designated for storing variable data, code, and program metadata are all present.</p>
+                
+                <p>Noteable sections include '.text', which contains the program's code, '.data', which is used for values known at compile time (global/static variables), '.bss', which contains uninitialized data, and many more. There are also ".plt" and ".got" sections that are used in the dynamic linking of processes, but we won't be covering that process now.</p>
+                
+                <p>These sections contained in the compiled binary are then loaded into memory, creating the process' structure.</p>
+                
+                <p>How the process is loaded into memory is handled by the kernel and is a bit involved, so I'll be talking about that in another paper. For now, just understand that the data stored in the executable file's sections is loaded into memory.</p>
+                
+                <p>A portion of the total memory the process is given by the kernel will also be used for the stack and heap.</p>
+                
+                <h2>The stack and the heap</h2>
+                <p>The stack and heap are regions of a process' memory used for storing data at runtime. These are both data structures that to store data like variables, but exhibit different behavior.</p>
+                
+                <p>The stack, for instance, can be thought of as a stack of books. It follows a "last in first out" system, and is addressed with the assembly instructions "pop" and "push". "push" places some data on the top of the stack, while "pop" takes the last piece of data placed on the stack and stores it in a CPU register.</p>
+                
+                
+                <div class="code-block">
+                    <pre><code>
+               Stack      
+        ┌──────────────────┐
+        │  Variable X      │ &LT;-- accessed first
+        ├──────────────────┤
+        │  Variable Y      │ &LT;-- accessed second
+        ├──────────────────┤
+        │  Variable Z      │ &LT;-- accessed third
+        ├──────────────────┤
+        │        ...       │
+        └──────────────────┘
+                    </code></pre>
+                </div>
+                
+                <p>Variable X would be "popped off the stack" first, then variable Y, and then variable Z.</p>
+                
+                <p>Important to note, the stack grows downwards instead of upwards, as shown in the example, and data on the stack is immutable by nature.</p>
+                
+                <p>Data on the heap, however, is dynamic and can grow.</p>
+                
+                <p>The heap is a slab of memory that contains "chunks" of data that can be accessed whenever and from wherever, regardless of their position in the heap. If a variable stored on the heap wants to grow in size, the chunks of data associated with that variable can grow in size to accommodate that change.</p>
+
+                <p>Data stored on the heap can also be broken up into more than one chunk in a process called "fragmentation", so if a chunk of data for a variable that wants to grow in size is sandwiched between two other chunks of data, another chunk can be added elsewhere that the variable will be able to grow in to.</p>
+                
+                <div class="code-block">
+                    <pre><code>
+                         Heap      
+    ┌───────────────┬───────────────────────────────────┐
+    │  Variable X   │              Variable Y           │
+    ├───────────────┴──┬─────────────────────────┬──────┤ 
+    │    Variable Z    │  Variable X (2nd chunk) │      │
+    ├──────────────────┴─────────────────────────┴──────┤
+    │                                                   │
+    │                      ...                          │
+    │                                                   │
+    └───────────────────────────────────────────────────┘
+                    </code></pre>
+                </div>
+                
+                <p>Variable X, in this graphic has two chunks. An example of how a variable might be fragmented is a string with some characters stored in either chunk. In most programming languages, strings are stored on the heap so they can be sized dynamically.</p>
+                
+                <p>One thing that is important to remember is that the implementation of the stack and heap can differ between operating systems. Ultimately, these behaviors exhibited by the stack and heap are defined by the developers of the operating system running the process. Another important thing to remember is that despite their different behaviors, the stack, heap, and any other regions of memory are just a slice of the overall buffer of bits that is memory. Poorly defined or not defined checks on memory allocations have created the 'buffer overflow' class of vulnerability, which remains one of the most commonly abused binary exploitation techniques to this day.</p>
+                                
+                <p>Also, when threads are spawned by a process, they typically share the main process' heap and have their own stack. Browsers like Chromium actually spawn a new process entirely for each site you visit, which provides greater security. The drawback is that processes are <i>much</i> more resource-intensive than threads. Its a tradeoff, and also one of the reasons people complain about Chromium-based browsers being RAM hogs</p>
+                
+                <h2>Execution</h2>
+                
+                <p>Once a program has been loaded into memory, execution can begin. I won't be covering process execution here either, as it requires a good understanding of assembly, but a specialized CPU register known as the "instruction pointer", "ip", or "rip" is directed to the entrypoint of the process' code. In ELF executables, some code held in the '.init' section will be run before control is handed off to the main() function.</p>
+
+            </div>
+            <a href="../../index.html" class="home-button">Back to Home</a>
+        </article>
+    </main>
+    
+    <footer>
+        <p>&copy; 2024 Stoat Security. All rights reserved.</p>
+    </footer>
+    
+    <script src="../../scripts/particles.js"></script>
+    <script src="../../scripts/post.js"></script>
+</body>
+</html>
+

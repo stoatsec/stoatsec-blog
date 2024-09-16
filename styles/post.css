@@ -6,6 +6,8 @@
     --hover-color: #ff7f50;
     --card-bg: #232d3f;
     --code-text-color: #b3e5fc;
+    --scrollbar-bg: #2c3e50; 
+    --scrollbar-thumb: #ff7f50;
 }
 
 * {
@@ -21,6 +23,8 @@ body {
     line-height: 1.6;
     min-height: 100vh;
     overflow-x: hidden;
+    display: flex;
+    flex-direction: column;
 }
 
 .container {
@@ -29,6 +33,17 @@ body {
     padding: 60px 20px;
     position: relative;
     z-index: 2;
+    flex: 1 0 auto;
+}
+
+footer {
+    background-color: var(--secondary-bg);
+    text-align: center;
+    padding: 5px 0;
+    font-size: 0.8rem;
+    position: relative;
+    z-index: 10;
+    flex-shrink: 0;
 }
 
 .progress-bar {
@@ -84,17 +99,41 @@ footer {
 
 .code-block {
     background-color: var(--secondary-bg);
-    border-radius: 4px;
+    border-radius: 8px;
     padding: 20px;
     margin-bottom: 20px;
     position: relative;
+    overflow-x: auto;
 }
 
 .code-block pre {
     margin: 0;
-    white-space: pre-wrap;
-    word-wrap: break-word;
+    white-space: pre;
     color: var(--code-text-color);
+    font-family: 'Fira Code', monospace;
+    font-size: 0.9rem;
+    line-height: 1.5;
+}
+
+.code-block::-webkit-scrollbar {
+    height: 8px;
+    background-color: var(--scrollbar-bg);
+}
+
+
+.code-block::-webkit-scrollbar-thumb {
+    background-color: var(--scrollbar-bg);
+    border-radius: 4px;
+    transition: background-color 0.3s ease;
+}
+
+.code-block::-webkit-scrollbar-thumb:hover {
+    background-color: var(--scrollbar-bg);
+}
+
+.code-block {
+    scrollbar-width: auto;
+    scrollbar-color: var(--scrollbar-bg) var(--secondary-bg);
 }
 
 .copy-button {
@@ -111,10 +150,17 @@ footer {
     display: flex;
     align-items: center;
     justify-content: center;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+    z-index: 1;
 }
 
 .copy-button:hover {
     background-color: var(--hover-color);
+    transform: scale(1.05);
+}
+
+.copy-button:active {
+    transform: scale(0.95);
 }
 
 .background-animation {
@@ -141,7 +187,6 @@ a:hover {
     text-decoration: underline;
 }
 
-
 .progress-bar {
     position: fixed;
     top: 0;
@@ -163,8 +208,6 @@ a:hover {
     border-radius: 4px;
 }
 
-
-
 .home-button {
     display: inline-block;
     background-color: var(--accent-color);
@@ -178,15 +221,6 @@ a:hover {
 
 .home-button:hover {
     background-color: var(--hover-color);
-}
-
-footer {
-    background-color: var(--secondary-bg);
-    text-align: center;
-    padding: 5px 0;
-    font-size: 0.8rem;
-    position: relative;
-    z-index: 10;
 }
 
 @media (max-width: 768px) {
